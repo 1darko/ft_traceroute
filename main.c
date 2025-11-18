@@ -41,6 +41,7 @@ To  speed  up work, normally several probes are sent simultaneously.  On the oth
 */
 
 int resolve_ip(const char *name_or_ip, struct sockaddr_in *dest_addr);
+char* name_resolve(struct sockaddr_in recv_addr);
 
 int main(int ac, char **av)
 {
@@ -107,9 +108,11 @@ int main(int ac, char **av)
             gettimeofday(&end, NULL);
             double rtt = (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
             if(probe == 0){
-                printf("%2d  A TROUVER(%s)  ", ttl, inet_ntoa(recv_addr.sin_addr));
+                char *resolved_name = name_resolve(recv_addr);
+                printf("%2d  %s (%s)  ", resolved_name, ttl, inet_ntoa(recv_addr.sin_addr));
+                free(resolved_name);
             }
-            (probe + 1 == PROBES_TO_SEND) ? printf("%.3f ms\n", rtt) : printf("%.3f ms  ", rtt);
+            n < 0 ? ((probe + 1 == PROBES_TO_SEND)  ? printf("*\n") : printf("*  ")) : ((probe + 1 == PROBES_TO_SEND) ? printf("%.3f ms\n", rtt) : printf("%.3f ms  ", rtt));
         };
         struct iphdr *ip = (struct iphdr *)buf;
         int iphdr_len = ip->ihl * 4;
@@ -157,6 +160,11 @@ int main(int ac, char **av)
 
 
 
+char* name_resolve(struct sockaddr_in recv_addr){
+    char host[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &recv_addr.sin_addr, host, sizeof(host));
+    return strdup(host);
+}
 
 int resolve_ip(const char *name_or_ip, struct sockaddr_in *dest_addr)
 {
