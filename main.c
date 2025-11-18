@@ -75,8 +75,10 @@ int main(int ac, char **av)
         return 1;
     };
     struct timeval tv;
+    // tv.tv_sec = options.timeout;;
     tv.tv_sec = TIMEOUT;
     tv.tv_usec = 0;
+    //
     setsockopt(recv_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
     printf("Traceroute to %s (%s), %d hops max, %d probes per hop\n",
