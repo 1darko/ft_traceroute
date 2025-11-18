@@ -2,18 +2,12 @@
 
 
 /*
-Bonuses:
-         -N num_probes
-    
-         Set  the  number of probes to be sent simultaneously. The default is 3.
-
-         -z waittime
-            Wait waittime seconds between probes (default 0). This option can be used to
-
-            slow down the sending rate of probes.
-
-        -w waittime
-            Set the time (in seconds) to wait for a response to a probe.  The default is 3 seconds.
+    TODO :
+        check values for overflows and limits
+        implement bonuses
+        implement help message
+        implement error handling ???
+        
 
         
 
@@ -42,6 +36,130 @@ To  speed  up work, normally several probes are sent simultaneously.  On the oth
 
 int resolve_ip(const char *name_or_ip, struct sockaddr_in *dest_addr);
 char* name_resolve(struct sockaddr_in recv_addr);
+int ft_strcmp(const char *s1, const char *s2);
+int isnumeric(const char *str);
+void print_help(void);
+void print_invalid_option(const char *opt);
+
+
+int options(int ac, char **av, traceroute_options *opts, const char **dst_ip)
+{
+    int break_flag;
+    int ip_found = 0;
+    for(int i = 1; i < ac; i++){
+        break_flag = 0;
+        if(av[i][0] == '-'){
+            for(int j = 1; av[i][j] != '\0' && !break_flag; j++){
+                switch(av[i][j]){
+                    case '-':
+                        strcmp(av[i], "--help") == 0 ? print_help() : print_invalid_option(av[i]);
+                        return 1;
+                    case 'N':
+                        if(av[i][j + 1] != '\0'){
+                            if(!isnumeric(&av[i][j + 1])){
+                                return (value_error(av[i], 'i', 1), 1);
+                            }
+                            opts->n_probes = &av[i][j + 1];
+                            break_flag = 1;
+                            break;
+                        }
+                        else if(++i < ac && av[i][0] != '\0') {
+                            if(!isnumeric(av[i])){
+                                return (value_error(av[i], 'i', 0), 1);
+                            }
+                            opts->n_probes = av[i];
+                        }
+                        else{
+                            fprintf(stderr, "ft_traceroute: option '-i' requires an argument\n");
+                            return 1;
+                        }
+                        break_flag = 1;
+                        break;
+                    case 'z':
+                        if(av[i][j + 1] != '\0'){
+                            if(!isnumeric(&av[i][j + 1])){
+                                return (value_error(av[i], 'z', 1), 1);
+                            }
+                            opts->wait_between_probes = &av[i][j + 1];
+                        }
+                        else if(++i < ac && av[i][0] != '\0') {
+                            if(!isnumeric(av[i])){
+                                return (value_error(av[i], 'z', 0), 1);
+                            }
+                            opts->wait_between_probes = av[i];
+                        }
+                        else{
+                            fprintf(stderr, "ft_traceroute: option '-z' requires an argument\n");
+                            return 1;
+                        }
+                        break_flag = 1;
+                        break;
+                    case 'w':
+                        if(av[i][j + 1] != '\0'){
+                            if(!isnumeric(&av[i][j + 1])){
+                                return (value_error(av[i], 'w', 1), 1);
+                            }
+                            opts->timeout = &av[i][j + 1];
+                        }
+                        else if(++i < ac && av[i][0] != '\0') {
+                            if(!isnumeric(av[i])){
+                                return (value_error(av[i], 'w', 0), 1);
+                            }
+                            opts->timeout = av[i];
+                        }
+                        else{
+                            fprintf(stderr, "ft_traceroute: option '-w' requires an argument\n");
+                            return 1;
+                        }
+                        break_flag = 1;
+                        break;
+                    case 'f':
+                        if(av[i][j + 1] != '\0'){
+                            if(!isnumeric(&av[i][j + 1])){
+                                return (value_error(av[i], 'f', 1), 1);
+                            }
+                            opts->first_ttl = &av[i][j + 1];
+                        }
+                        else if(++i < ac && av[i][0] != '\0') {
+                            if(!isnumeric(av[i])){
+                                return (value_error(av[i], 'f', 0), 1);
+                            }
+                            opts->first_ttl = av[i];
+                        }
+                        else{
+                            fprintf(stderr, "ft_traceroute: option '-f' requires an argument\n");
+                            return 1;
+                        }
+                        break_flag = 1;
+                        break;
+                    default:
+                        fprintf(stderr, "ft_traceroute: invalid option -- '%c'\n", av[i][j]);
+                        fprintf(stderr, "Try 'ft_traceroute -?' for more information.\n");
+                        return 1;
+                    }
+                }
+            }
+            else if(ip_found == 0){
+                *dst_ip = av[i];
+                ip_found = 1;
+            }
+            else{
+                fprintf(stderr, "ft_traceroute: extra argument '%s'\n", av[i]);
+                fprintf(stderr, "Try 'ft_traceroute -?' for more information.\n");
+                return 1;
+            }
+        }
+        if(!ip_found){
+            fprintf(stderr, "ft_traceroute: destination address required\n");
+            fprintf(stderr, "Try 'ft_traceroute -?' for more information.\n");
+            return 1;
+    }
+
+    if(flag_checker2(opts))
+        return 1;
+    return 0;
+};
+
 
 int main(int ac, char **av)
 {
@@ -49,21 +167,14 @@ int main(int ac, char **av)
         fprintf(stderr, "Usage: sudo ft_traceroute <destination>\n");
         return 1;
     }
-
+    char const *dst_ip = NULL;
+    traceroute_options options = {0};
+    options_filler(ac, av, &dst_ip, &options);
     struct sockaddr_in dest_addr = {.sin_family = AF_INET, .sin_port = htons(STARTING_PORT)};
-    if(resolve_ip(av[1], &dest_addr) != 0)
-    {
-    //     printf("Traceroute to %s (%s), %d hops max\n",
-    //         av[1],
-    //         inet_ntoa(dest_addr.sin_addr), MAX_HOPS);
-    // }
-    // else{
-        fprintf(stderr, "ft_traceroute: unknown host %s\n", av[1]);
+    if(resolve_ip(dst_ip, &dest_addr) != 0){
+        fprintf(stderr, "ft_traceroute: unknown host %s\n", dst_ip);
         return 1;
     };
-    traceroute_options options = {0};
-    // options_filler(&options, av);
-
     int send_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if(send_sock < 0){
         fprintf(stderr, "error creating socket\n");
@@ -111,7 +222,7 @@ int main(int ac, char **av)
             double rtt = (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
             if(probe == 0){
                 char *resolved_name = name_resolve(recv_addr);
-                printf("%2d  %s (%s)  ", resolved_name, ttl, inet_ntoa(recv_addr.sin_addr));
+                printf("%2d  First name : %s (%s)  ", ttl, (resolved_name != NULL ? resolved_name : inet_ntoa(recv_addr.sin_addr)), inet_ntoa(recv_addr.sin_addr));
                 free(resolved_name);
             }
             n < 0 ? ((probe + 1 == PROBES_TO_SEND)  ? printf("*\n") : printf("*  ")) : ((probe + 1 == PROBES_TO_SEND) ? printf("%.3f ms\n", rtt) : printf("%.3f ms  ", rtt));
@@ -164,7 +275,10 @@ int main(int ac, char **av)
 
 char* name_resolve(struct sockaddr_in recv_addr){
     char host[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &recv_addr.sin_addr, host, sizeof(host));
+    if(inet_ntop(AF_INET, &recv_addr.sin_addr, host, sizeof(host)) == NULL)
+        return NULL;
+    if(getnameinfo((struct sockaddr *)&recv_addr, sizeof(recv_addr), host, sizeof(host), NULL, 0, 0) != 0)
+        return NULL;
     return strdup(host);
 }
 
@@ -193,4 +307,37 @@ int resolve_ip(const char *name_or_ip, struct sockaddr_in *dest_addr)
         return 0;
     }
     return 1;
-}
+};
+
+int ft_strcmp(const char *s1, const char *s2)
+{
+    unsigned char *s3;
+    unsigned char *s4;
+
+    s3 = (unsigned char *)s1;
+    s4 = (unsigned char *)s2;
+    while(*s3 == *s4 && *s3 != '\0')
+    {
+        ++s3;
+        ++s4;
+    }
+    return (*s3 - *s4);
+};
+
+int isnumeric(const char *str){
+    if(str == NULL || *str == '\0')
+        return 0;
+    for(int i = 0; str[i] != '\0'; i++){
+        if(str[i] < '0' || str[i] > '9')
+            return 0;
+    }
+    return 1;
+};
+
+void print_help(void){
+    printf("Placeholder for help message\n");
+};
+
+void print_invalid_option(const char *opt){
+    fprintf(stderr, "Invalid option: %s\n", opt);
+};

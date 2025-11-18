@@ -34,13 +34,29 @@
 
 typedef struct s_traceroute_options{
     int     n_probes;
-    float   wait_between_probes;
+    int     wait_between_probes;
     int     timeout;
     int     max_hops;
+    int     first_ttl;
     int     starting_port;    
 }   traceroute_options;
 
+/*
+Bonuses:
+         -N num_probes
+    
+         Set  the  number of probes to be sent simultaneously. The default is 3.
 
+         -z waittime
+            Wait waittime seconds between probes (default 0). This option can be used to
+
+            slow down the sending rate of probes.
+
+        -w waittime
+            Set the time (in seconds) to wait for a response to a probe.  The default is 3 seconds.
+        -f first_ttl
+            Set the initial time-to-live for outgoing packets. The default is 1.
+*/
 
 #endif
 
