@@ -40,23 +40,52 @@ int ft_strcmp(const char *s1, const char *s2);
 int isnumeric(const char *str);
 void print_help(void);
 void print_invalid_option(const char *opt);
+size_t ft_strlen(const char *s);
+void	*ft_memset(void *s, int c, size_t n);
 
+
+
+void	*ft_memset(void *s, int c, size_t n)
+{
+	size_t			cur;
+	unsigned char	*temp;
+
+	temp = (unsigned char *) s;
+	cur = 0;
+	while (cur < n)
+	{
+		*(temp++) = (unsigned char)c;
+		cur++;
+	}
+	return (s);
+};
+
+
+size_t	ft_strlen(const char *str)
+{
+	size_t	i;
+
+	i = 0;
+	while (str[i])
+		i++;
+	return (i);
+}
 int int_overflow(char *a)
 {
     if(!a)
         return 0;
-    if(strlen(a) > 10)
+    if(ft_strlen(a) > 10)
         return 1;
-    if(strlen(a) == 10){
-        if(strcmp(a, "2147483647") > 0)
+    if(ft_strlen(a) == 10){
+        if(ft_strcmp(a, "2147483647") > 0)
             return 1;
     }
     return 0;
 };
 
 void value_error(const char *value, char near_char, int type){
-    fprintf(stderr, "ping: invalid value (`%s' near `%c')\n", type ? value + 2 : value, near_char);
-    fprintf(stderr, "Try 'ft_ping -?' for more information.\n");
+    fprintf(stderr, "ft_traceroute: invalid value (`%s' near `%c')\n", type ? value + 2 : value, near_char);
+    fprintf(stderr, "Try 'ft_traceroute --help' for more information.\n");
 }
 
 
@@ -99,7 +128,7 @@ int parser(int ac, char **av, traceroute_options *opts, char **dst_ip)
             for(int j = 1; av[i][j] != '\0' && !break_flag; j++){
                 switch(av[i][j]){
                     case '-':
-                        strcmp(av[i], "--help") == 0 ? print_help() : print_invalid_option(av[i]);
+                        ft_strcmp(av[i], "--help") == 0 ? print_help() : print_invalid_option(av[i]);
                         return 1;
                     case 'q':
                         if(av[i][j + 1] != '\0'){
@@ -206,7 +235,6 @@ int parser(int ac, char **av, traceroute_options *opts, char **dst_ip)
                 }
             }
             else if(ip_found == 0){
-                printf("HELLO\n");
                 *dst_ip = av[i];
                 ip_found = 1;
             }
@@ -279,9 +307,9 @@ int main(int ac, char **av)
     
 
     for(int ttl = options.first_ttl_value; ttl <= options.max_hops_value; ttl++){
-        // memset(&prev_recv_addr, 0, sizeof(prev_recv_addr));
+        // ft_memset(&prev_recv_addr, 0, sizeof(prev_recv_addr));
         for(int probe = 0; probe < options.q_probes_value; probe++){
-            memset(buf, 0, sizeof(buf));
+            ft_memset(buf, 0, sizeof(buf));
             if(setsockopt(send_sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)) < 0){
                 fprintf(stderr, "error setting socket option TTL\n");
                 return 1;
@@ -385,7 +413,7 @@ int resolve_ip(const char *name_or_ip, struct sockaddr_in *dest_addr)
     // char ipstr[INET_ADDRSTRLEN];
     // if (!name_or_ip || !(*resolved_ip))
         // return 1;
-    memset(&hints, 0, sizeof(hints));
+    ft_memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;        /* force IPv4 */
     hints.ai_socktype = 0;            /* pas de contrainte */
 
@@ -436,3 +464,4 @@ void print_help(void){
 void print_invalid_option(const char *opt){
     fprintf(stderr, "Invalid option: %s\n", opt);
 };
+
