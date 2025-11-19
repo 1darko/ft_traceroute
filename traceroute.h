@@ -21,6 +21,7 @@
 #include <netinet/ip_icmp.h>
 #include <limits.h>
 #include <signal.h>
+#include <netinet/udp.h>
 
 #define PROBES_TO_SEND 3
 #define MAX_HOPS 30
@@ -46,6 +47,7 @@ typedef struct s_traceroute_options{
     int      max_hops_value;
     int      first_ttl_value;
     int      starting_port_value;
+    int      starting_port_set;
 }   traceroute_options;
 
 /*
