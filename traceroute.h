@@ -33,17 +33,24 @@
 #endif
 
 typedef struct s_traceroute_options{
-    int     n_probes;
-    int     wait_between_probes;
-    int     timeout;
-    int     max_hops;
-    int     first_ttl;
-    int     starting_port;    
+    char*     q_probes; // -q
+    char*     wait_between_probes; // -z
+    char*     timeout; // -w
+    char*     max_hops; // -m
+    char*     first_ttl; // -f
+    char*     starting_port; // -p
+
+    int      q_probes_value;
+    int      wait_between_probes_value;
+    int      timeout_value;
+    int      max_hops_value;
+    int      first_ttl_value;
+    int      starting_port_value;
 }   traceroute_options;
 
 /*
 Bonuses:
-         -N num_probes
+         -q num_probes
     
          Set  the  number of probes to be sent simultaneously. The default is 3.
 
