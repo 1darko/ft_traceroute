@@ -41,8 +41,55 @@ int isnumeric(const char *str);
 void print_help(void);
 void print_invalid_option(const char *opt);
 
+int int_overflow(char *a)
+{
+    if(!a)
+        return 0;
+    if(strlen(a) > 10)
+        return 1;
+    if(strlen(a) == 10){
+        if(strcmp(a, "2147483647") > 0)
+            return 1;
+    }
+    return 0;
+};
 
-int options(int ac, char **av, traceroute_options *opts, const char **dst_ip)
+void value_error(const char *value, char near_char, int type){
+    fprintf(stderr, "ping: invalid value (`%s' near `%c')\n", type ? value + 2 : value, near_char);
+    fprintf(stderr, "Try 'ft_ping -?' for more information.\n");
+}
+
+
+int value_check(traceroute_options *opts)
+{
+    // if(opts->q_probes <= 0 || opts->s_value > 1473){
+    //     fprintf(stderr, "ft_traceroute: invalid payload size '%d'\n", opts->s_value);
+    //     return 1;
+    // }
+    if(opts->q_probes && (atoi(opts->q_probes) <= 0 || int_overflow(opts->q_probes))){
+        fprintf(stderr, "ft_traceroute: invalid probes '%s'\n", opts->q_probes);
+        return 1;
+    }
+    if(opts->wait_between_probes && (atoi(opts->wait_between_probes) <= 0 || int_overflow(opts->wait_between_probes))){
+        fprintf(stderr, "ft_traceroute: invalid wait time '%s'\n", opts->wait_between_probes);
+        return 1;
+    }
+    if(opts->timeout && (atoi(opts->timeout) < 0 || int_overflow(opts->timeout))){
+        fprintf(stderr, "ft_traceroute: invalid timeout '%s'\n", opts->timeout);
+        return 1;
+    }
+    if(opts->first_ttl && (atoi(opts->first_ttl) < 1 || int_overflow(opts->first_ttl))){
+        fprintf(stderr, "ft_traceroute: invalid first TTL '%s'\n", opts->first_ttl);
+        return 1;
+    }
+    // if(int_overflow(opts->interval)){
+    //     fprintf(stderr, "ft_traceroute: invalid interval '%s'\n", opts->interval);
+    //     return 1;
+    // }
+    return 0;
+}
+
+int parser(int ac, char **av, traceroute_options *opts, char **dst_ip)
 {
     int break_flag;
     int ip_found = 0;
@@ -54,23 +101,23 @@ int options(int ac, char **av, traceroute_options *opts, const char **dst_ip)
                     case '-':
                         strcmp(av[i], "--help") == 0 ? print_help() : print_invalid_option(av[i]);
                         return 1;
-                    case 'N':
+                    case 'q':
                         if(av[i][j + 1] != '\0'){
                             if(!isnumeric(&av[i][j + 1])){
-                                return (value_error(av[i], 'i', 1), 1);
+                                return (value_error(av[i], 'q', 1), 1);
                             }
-                            opts->n_probes = &av[i][j + 1];
+                            opts->q_probes = &av[i][j + 1];
                             break_flag = 1;
                             break;
                         }
                         else if(++i < ac && av[i][0] != '\0') {
                             if(!isnumeric(av[i])){
-                                return (value_error(av[i], 'i', 0), 1);
+                                return (value_error(av[i], 'q', 0), 1);
                             }
-                            opts->n_probes = av[i];
+                            opts->q_probes = av[i];
                         }
                         else{
-                            fprintf(stderr, "ft_traceroute: option '-i' requires an argument\n");
+                            fprintf(stderr, "ft_traceroute: option '-q' requires an argument\n");
                             return 1;
                         }
                         break_flag = 1;
@@ -113,6 +160,25 @@ int options(int ac, char **av, traceroute_options *opts, const char **dst_ip)
                         }
                         break_flag = 1;
                         break;
+                    case 'm':
+                        if(av[i][j + 1] != '\0'){
+                            if(!isnumeric(&av[i][j + 1])){
+                                return (value_error(av[i], 'm', 1), 1);
+                            }
+                            opts->max_hops = &av[i][j + 1];
+                        }
+                        else if(++i < ac && av[i][0] != '\0') {
+                            if(!isnumeric(av[i])){
+                                return (value_error(av[i], 'm', 0), 1);
+                            }
+                            opts->max_hops = av[i];
+                        }
+                        else{
+                            fprintf(stderr, "ft_traceroute: option '-m' requires an argument\n");
+                            return 1;
+                        }
+                        break_flag = 1;
+                        break;
                     case 'f':
                         if(av[i][j + 1] != '\0'){
                             if(!isnumeric(&av[i][j + 1])){
@@ -140,6 +206,7 @@ int options(int ac, char **av, traceroute_options *opts, const char **dst_ip)
                 }
             }
             else if(ip_found == 0){
+                printf("HELLO\n");
                 *dst_ip = av[i];
                 ip_found = 1;
             }
@@ -151,26 +218,33 @@ int options(int ac, char **av, traceroute_options *opts, const char **dst_ip)
         }
         if(!ip_found){
             fprintf(stderr, "ft_traceroute: destination address required\n");
-            fprintf(stderr, "Try 'ft_traceroute -?' for more information.\n");
+            fprintf(stderr, "Try 'ft_traceroute --help' for more information.\n");
             return 1;
     }
-
-    if(flag_checker2(opts))
+    if(value_check(opts))
         return 1;
+    !opts->q_probes ? (opts->q_probes_value = PROBES_TO_SEND) : (opts->q_probes_value = atoi(opts->q_probes));
+    if(opts->wait_between_probes)
+        opts->wait_between_probes_value = atoi(opts->wait_between_probes);
+    !opts->timeout ? (opts->timeout_value = TIMEOUT) : (opts->timeout_value = atoi(opts->timeout));
+    !opts->max_hops ? (opts->max_hops_value = MAX_HOPS) : (opts->max_hops_value = atoi(opts->max_hops));
+    !opts->first_ttl ? (opts->first_ttl_value = 1) : (opts->first_ttl_value = atoi(opts->first_ttl));
+    !opts->starting_port ? (opts->starting_port_value = STARTING_PORT) : (opts->starting_port_value = atoi(opts->starting_port));
     return 0;
 };
 
 
 int main(int ac, char **av)
 {
-    if(ac != 2){
+    if(ac < 2){
         fprintf(stderr, "Usage: sudo ft_traceroute <destination>\n");
         return 1;
     }
-    char const *dst_ip = NULL;
+    char *dst_ip = NULL;
     traceroute_options options = {0};
-    options_filler(ac, av, &dst_ip, &options);
-    struct sockaddr_in dest_addr = {.sin_family = AF_INET, .sin_port = htons(STARTING_PORT)};
+    if(parser(ac, av, &options, &dst_ip))
+        return 1;
+    struct sockaddr_in dest_addr = {.sin_family = AF_INET, .sin_port = htons(options.starting_port_value)};
     if(resolve_ip(dst_ip, &dest_addr) != 0){
         fprintf(stderr, "ft_traceroute: unknown host %s\n", dst_ip);
         return 1;
@@ -186,47 +260,68 @@ int main(int ac, char **av)
         return 1;
     };
     struct timeval tv;
-    // tv.tv_sec = options.timeout;;
-    tv.tv_sec = TIMEOUT;
+    tv.tv_sec = options.timeout_value;;
     tv.tv_usec = 0;
     //
     setsockopt(recv_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
     printf("Traceroute to %s (%s), %d hops max, %d probes per hop\n",
         av[1],
-        inet_ntoa(dest_addr.sin_addr), MAX_HOPS, PROBES_TO_SEND);
+        inet_ntoa(dest_addr.sin_addr), options.max_hops_value, options.q_probes_value);
 
 
     char buf[1500];
-    for(int ttl = 1; ttl <= MAX_HOPS; ttl++){
-        for(int probe = 0; probe < PROBES_TO_SEND; probe++){
+    ssize_t n = 0;
+    char msg[] = "Trace the road plz";
+    struct timeval start, end;
+    struct sockaddr_in recv_addr;
+    // struct sockaddr_in prev_recv_addr;
+    
+
+    for(int ttl = options.first_ttl_value; ttl <= options.max_hops_value; ttl++){
+        // memset(&prev_recv_addr, 0, sizeof(prev_recv_addr));
+        for(int probe = 0; probe < options.q_probes_value; probe++){
             memset(buf, 0, sizeof(buf));
             if(setsockopt(send_sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)) < 0){
                 fprintf(stderr, "error setting socket option TTL\n");
                 return 1;
             };
-            unsigned short port = STARTING_PORT + ttl;
+            unsigned short port = options.starting_port_value + ttl;
             dest_addr.sin_port = htons(port);
-            char msg[] = "Trace the road plz";
-            struct timeval start, end;
             gettimeofday(&start, NULL);
             if(sendto(send_sock, msg, sizeof(msg), 0, (struct sockaddr *)&dest_addr,\
-                sizeof(dest_addr)) < 0){
+            sizeof(dest_addr)) < 0){
                 fprintf(stderr, "error sending probe #%d\n", ttl);
                 return 1;
             };
-            struct sockaddr_in recv_addr;
             socklen_t addr_len = sizeof(recv_addr);
-            ssize_t n = recvfrom(recv_sock, buf, sizeof(buf), 0, (struct sockaddr *)&recv_addr, &addr_len);
+            n = recvfrom(recv_sock, buf, sizeof(buf), 0, (struct sockaddr *)&recv_addr, &addr_len);
             gettimeofday(&end, NULL);
             double rtt = (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-            if(probe == 0){
+            if(probe == 0 && n >= 0){
                 char *resolved_name = name_resolve(recv_addr);
-                printf("%2d  First name : %s (%s)  ", ttl, (resolved_name != NULL ? resolved_name : inet_ntoa(recv_addr.sin_addr)), inet_ntoa(recv_addr.sin_addr));
+                printf("%2d  %s (%s)  ", ttl, (resolved_name != NULL ? resolved_name : inet_ntoa(recv_addr.sin_addr)), inet_ntoa(recv_addr.sin_addr));
                 free(resolved_name);
             }
-            n < 0 ? ((probe + 1 == PROBES_TO_SEND)  ? printf("*\n") : printf("*  ")) : ((probe + 1 == PROBES_TO_SEND) ? printf("%.3f ms\n", rtt) : printf("%.3f ms  ", rtt));
+            else if(probe == 0 && n < 0){
+                printf("%2d  *  ", ttl);
+            }
+            // printf("\nAdresse recue : %s\n", inet_ntoa(recv_addr.sin_addr));
+            // if(prev_recv_addr.sin_addr.s_addr != recv_addr.sin_addr.s_addr && probe != 0 && n >= 0){
+            //     char tmp[INET_ADDRSTRLEN];
+            //     inet_ntop(AF_INET, &recv_addr.sin_addr, tmp, sizeof(tmp));
+            //     printf("Hi(%s) ", tmp);
+            // }
+            n < 0 ? ((probe + 1 == options.q_probes_value)  ? printf("*") : printf("*  ")) : ((probe + 1 == options.q_probes_value) ? printf("%.3f ms", rtt) : printf("%.3f ms  ", rtt));
+            if(options.wait_between_probes_value){
+                fflush(stdout);
+                sleep(options.wait_between_probes_value);
+            }
+            // prev_recv_addr = recv_addr;
         };
+        printf("\n");
+        if(n < 0)
+            continue;
         struct iphdr *ip = (struct iphdr *)buf;
         int iphdr_len = ip->ihl * 4;
         struct icmphdr *icmp = (struct icmphdr *)(buf + iphdr_len);
