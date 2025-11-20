@@ -67,7 +67,8 @@ size_t	ft_strlen(const char *str)
 	while (str[i])
 		i++;
 	return (i);
-}
+};
+
 int int_overflow(char *a)
 {
     if(!a)
@@ -96,7 +97,7 @@ int port_range(char *a)
 void value_error(const char *value, char near_char, int type){
     fprintf(stderr, "ft_traceroute: invalid value (`%s' near `%c')\n", type ? value + 2 : value, near_char);
     fprintf(stderr, "Try 'ft_traceroute --help' for more information.\n");
-}
+};
 
 
 int value_check(traceroute_options *opts)
@@ -125,10 +126,10 @@ int value_check(traceroute_options *opts)
     //     fprintf(stderr, "ft_traceroute: invalid starting port '%s'\n", opts->starting_port);
     //     return 1;
     // }
-    // if(int_overflow(opts->interval)){
-    //     fprintf(stderr, "ft_traceroute: invalid interval '%s'\n", opts->interval);
-    //     return 1;
-    // }
+    if(opts->max_hops && (atoi(opts->max_hops) < 1 || int_overflow(opts->max_hops))){
+        fprintf(stderr, "ft_traceroute: invalid max hops '%s'\n", opts->max_hops);
+        return 1;
+    }
     return 0;
 }
 
@@ -347,41 +348,66 @@ int main(int ac, char **av)
     else{
         tv.tv_usec = 0;
     }
-    setsockopt(recv_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    // setsockopt(recv_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
     char msg[32];
     ft_memset(msg, 'A', sizeof(msg));
-    printf("Traceroute to %1$s (%1$s), %2$d hops max, %3$d bytes packet\n",
-        inet_ntoa(dest_addr.sin_addr), options.max_hops_value, sizeof(msg) + sizeof(struct iphdr) + sizeof(struct udphdr));
+    printf("Traceroute to %s (%s), %d hops max, %d bytes packet\n",
+        dst_ip,inet_ntoa(dest_addr.sin_addr), options.max_hops_value, sizeof(msg) + sizeof(struct iphdr) + sizeof(struct udphdr));
 
 
     char buf[1500];
     ssize_t n = 0;
     struct timeval start, end;
     struct sockaddr_in recv_addr;
-    
-
+    int last_hop = 0;
+    int probes_sent = 0;
     for(int ttl = options.first_ttl_value; ttl <= options.max_hops_value; ttl++){
+        if(ttl == options.max_hops_value)
+            last_hop = 1;
         for(int probe = 0; probe < options.q_probes_value; probe++){
             ft_memset(buf, 0, sizeof(buf));
             if(setsockopt(send_sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)) < 0){
-                fprintf(stderr, "error setting socket option TTL\n");
+                fprintf(stderr, "%s\n", strerror(errno));
                 return 1;
             };
             unsigned short port = options.starting_port_value + (options.starting_port_set ? ttl - 1 : 0);
             dest_addr.sin_port = htons(port);
-            uint16_t port_host_back = ntohs(port);
-            printf("Port (host order)    : %d", port_host_back);
-            printf(" Port (network order) : %u\n", port);
             gettimeofday(&start, NULL);
             if(sendto(send_sock, msg, sizeof(msg), 0, (struct sockaddr *)&dest_addr,\
             sizeof(dest_addr)) < 0){
-                fprintf(stderr, "error sending probe #%d\n", ttl);
+                fprintf(stderr, "%s\n", strerror(errno));
                 return 1;
             };
-            socklen_t addr_len = sizeof(recv_addr);
-            n = recvfrom(recv_sock, buf, sizeof(buf), 0, (struct sockaddr *)&recv_addr, &addr_len);
+            //Solution #2 : select before recvfrom
+            fd_set readfds;
+            FD_ZERO(&readfds);
+            FD_SET(recv_sock, &readfds);
+            int activity = select(recv_sock + 1, &readfds, NULL, NULL, &tv);
+            if(activity){
+                socklen_t addr_len = sizeof(recv_addr);
+                n = recvfrom(recv_sock, buf, sizeof(buf), 0, (struct sockaddr *)&recv_addr, &addr_len);
+            }
+            else{                
+                probes_sent++;
+                if(probes_sent % 16 == 0){
+                    tv.tv_sec = options.timeout_value;
+                    if(options.timeout_value == 0){
+                        tv.tv_usec = 1;
+                    }
+                    else{
+                        tv.tv_usec = 0;
+                    }
+                }
+                n = -1;
+            }
             gettimeofday(&end, NULL);
+            // Solution #1: reset timeout after each recvfrom
+            // if(n < 0){
+            //     tv.tv_sec = 1;
+            //     tv.tv_usec = 0;
+            //     setsockopt(recv_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+            // }
             double rtt = (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
             if(probe == 0 && n >= 0){
                 char *resolved_name = name_resolve(recv_addr);
@@ -392,7 +418,7 @@ int main(int ac, char **av)
                 printf("%2d  ", ttl);
             }
             n < 0 ? ((probe + 1 == options.q_probes_value)  ? printf("*") : printf("*  ")) : ((probe + 1 == options.q_probes_value) ? printf("%.3f ms", rtt) : printf("%.3f ms  ", rtt));
-            if(options.wait_between_probes_value && probe + 1 != options.q_probes_value){
+            if((options.wait_between_probes_value && (probe == 0 || probe + 1 != options.q_probes_value)) || !last_hop){
                 fflush(stdout);
                 sleep(options.wait_between_probes_value);
             }
@@ -513,8 +539,8 @@ void print_help(void){
     fprintf(stderr,"  -f first_ttl     Set the initial time-to-live for outgoing packets. The default is 1.\n");
     fprintf(stderr,"  -m max_ttl       Set the max number of hops (max time-to-live value) traceroute will use. The default is 30.\n");
     fprintf(stderr,"  -p port          Set the base UDP port number used in probes. The default is 33434.\n");
-    fprintf(stderr,"  -w time to wait  Set the timeout values for probes. The default is 3.\n");
-    fprintf(stderr,"  -q nqueries      Set the number of queries to be sent. The default is 1.\n");
+    fprintf(stderr,"  -w time to wait  Set the timeout values for probes. The default is 5.\n");
+    fprintf(stderr,"  -q nqueries      Set the number of queries to be sent. The default is 3.\n");
     fprintf(stderr,"  -z sendwait      Set the time to wait between sending probes. The default is 0.\n");
 };
 

@@ -26,7 +26,7 @@
 #define PROBES_TO_SEND 3
 #define MAX_HOPS 30
 #define WAIT_BETWEEN_PROBES 0
-#define TIMEOUT 3
+#define TIMEOUT 5
 #define STARTING_PORT 33433
 
 #ifndef PRINTER
