@@ -387,6 +387,11 @@ int main(int ac, char **av)
             if(activity){
                 socklen_t addr_len = sizeof(recv_addr);
                 n = recvfrom(recv_sock, buf, sizeof(buf), 0, (struct sockaddr *)&recv_addr, &addr_len);
+                // A voir la gestion error
+                if(n < 0){
+                    fprintf(stderr, "%s\n", strerror(errno));
+                    return 1;
+                }
             }
             else{                
                 probes_sent++;
