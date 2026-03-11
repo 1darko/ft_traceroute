@@ -67,6 +67,18 @@ Bonuses:
             Set the initial time-to-live for outgoing packets. The default is 1.
 */
 
+void	*ft_memset(void *s, int c, size_t n);
+size_t	ft_strlen(const char *str);
+int int_overflow(char *a);
+int port_range(char *a);
+int parser(int ac, char **av, traceroute_options *opts, char **dst_ip);
+int ft_strcmp(const char *s1, const char *s2);
+void value_error(const char *value, char near_char, int type);
+int value_check(traceroute_options *opts);
+int isnumeric(const char *str);
+void print_invalid_option(const char *opt);
+void print_help(void);
+
 #endif
 
 
