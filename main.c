@@ -112,6 +112,7 @@ void print_probe_result(int probe, ssize_t n, int ttl,
 {
     if (probe == 0 && n >= 0) {
         char *resolved_name = name_resolve(recv_addr);
+        printf("Le resolved name est %s\n\n", resolved_name);
         printf("%2d  %s (%s)  ", ttl,
                resolved_name ? resolved_name : inet_ntoa(recv_addr.sin_addr),
                inet_ntoa(recv_addr.sin_addr));
@@ -272,8 +273,7 @@ int main(int ac, char **av)
 //             unsigned short port = options.starting_port_value + (options.starting_port_set ? ttl - 1 : 0);
 //             dest_addr.sin_port = htons(port);
 //             gettimeofday(&start, NULL);
-//             if(sendto(send_sock, msg, sizeof(msg), 0, (struct sockaddr *)&dest_addr,\
-//             sizeof(dest_addr)) < 0){
+//             if(sendto(send_sock, msg, sizeof(msg), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0){
 //                 fprintf(stderr, "%s\n", strerror(errno));
 //                 return 1;
 //             };
