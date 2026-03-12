@@ -5,25 +5,51 @@ void value_error(const char *value, char near_char, int type){
     fprintf(stderr, "Try 'ft_traceroute --help' for more information.\n");
 };
 
+static int ft_atoi(const char *str)
+{
+	int	neg;
+	int	i;
+	int	num;
+
+	i = 0;
+	neg = 1;
+	num = 0;
+	while (str[i] == ' ' || str[i] == '\n' || str[i] == '\t' || str[i] == '\v'
+		|| str[i] == '\f' || str[i] == '\r')
+		i++;
+	if (str[i] == '-' || str[i] == '+')
+	{
+		if (str[i] == '-')
+			neg *= -1;
+		i++;
+	}
+	while (str[i] >= 48 && str[i] <= 57)
+	{
+		num = num * 10 + (str[i] - 48);
+		i++;
+	}
+	return (num * neg);
+}
+
 int value_check(traceroute_options *opts)
 {
     // if(opts->q_probes <= 0 || opts->s_value > 1473){
     //     fprintf(stderr, "ft_traceroute: invalid payload size '%d'\n", opts->s_value);
     //     return 1;
     // }
-    if(opts->q_probes && (atoi(opts->q_probes) <= 0 || int_overflow(opts->q_probes))){
+    if(opts->q_probes && (ft_atoi(opts->q_probes) <= 0 || int_overflow(opts->q_probes))){
         fprintf(stderr, "ft_traceroute: invalid probes '%s'\n", opts->q_probes);
         return 1;
     }
-    if(opts->wait_between_probes && (atoi(opts->wait_between_probes) <= 0 || int_overflow(opts->wait_between_probes))){
+    if(opts->wait_between_probes && (ft_atoi(opts->wait_between_probes) <= 0 || int_overflow(opts->wait_between_probes))){
         fprintf(stderr, "ft_traceroute: invalid wait time '%s'\n", opts->wait_between_probes);
         return 1;
     }
-    if(opts->timeout && (atoi(opts->timeout) < 0 || int_overflow(opts->timeout))){
+    if(opts->timeout && (ft_atoi(opts->timeout) < 0 || int_overflow(opts->timeout))){
         fprintf(stderr, "ft_traceroute: invalid timeout '%s'\n", opts->timeout);
         return 1;
     }
-    if(opts->first_ttl && (atoi(opts->first_ttl) < 1 || int_overflow(opts->first_ttl))){
+    if(opts->first_ttl && (ft_atoi(opts->first_ttl) < 1 || int_overflow(opts->first_ttl))){
         fprintf(stderr, "ft_traceroute: invalid first TTL '%s'\n", opts->first_ttl);
         return 1;
     }
@@ -31,7 +57,7 @@ int value_check(traceroute_options *opts)
     //     fprintf(stderr, "ft_traceroute: invalid starting port '%s'\n", opts->starting_port);
     //     return 1;
     // }
-    if(opts->max_hops && (atoi(opts->max_hops) < 1 || int_overflow(opts->max_hops))){
+    if(opts->max_hops && (ft_atoi(opts->max_hops) < 1 || int_overflow(opts->max_hops))){
         fprintf(stderr, "ft_traceroute: invalid max hops '%s'\n", opts->max_hops);
         return 1;
     }
@@ -100,17 +126,17 @@ int parser(int ac, char **av, traceroute_options *opts, char **dst_ip)
     }
     if (value_check(opts))
         return 1;
-    opts->q_probes_value              = opts->q_probes            ? atoi(opts->q_probes)           : PROBES_TO_SEND;
-    opts->timeout_value               = opts->timeout             ? atoi(opts->timeout)            : TIMEOUT;
-    opts->max_hops_value              = opts->max_hops            ? atoi(opts->max_hops)           : MAX_HOPS;
-    opts->first_ttl_value             = opts->first_ttl           ? atoi(opts->first_ttl)          : 1;
+    opts->q_probes_value              = opts->q_probes            ? ft_atoi(opts->q_probes)           : PROBES_TO_SEND;
+    opts->timeout_value               = opts->timeout             ? ft_atoi(opts->timeout)            : TIMEOUT;
+    opts->max_hops_value              = opts->max_hops            ? ft_atoi(opts->max_hops)           : MAX_HOPS;
+    opts->first_ttl_value             = opts->first_ttl           ? ft_atoi(opts->first_ttl)          : 1;
     if (opts->wait_between_probes)
-        opts->wait_between_probes_value = atoi(opts->wait_between_probes);
+        opts->wait_between_probes_value = ft_atoi(opts->wait_between_probes);
     if (!opts->starting_port) {
         opts->starting_port_value = STARTING_PORT;
         opts->starting_port_set   = 1;
     } else {
-        opts->starting_port_value = atoi(opts->starting_port);
+        opts->starting_port_value = ft_atoi(opts->starting_port);
         if (opts->starting_port_value == 0) {
             fprintf(stderr, "ft_traceroute: invalid starting port '%s'\n", opts->starting_port);
             return 1;
@@ -272,18 +298,18 @@ int parser(int ac, char **av, traceroute_options *opts, char **dst_ip)
 //     }
 //     if(value_check(opts))
 //         return 1;
-//     !opts->q_probes ? (opts->q_probes_value = PROBES_TO_SEND) : (opts->q_probes_value = atoi(opts->q_probes));
+//     !opts->q_probes ? (opts->q_probes_value = PROBES_TO_SEND) : (opts->q_probes_value = ft_atoi(opts->q_probes));
 //     if(opts->wait_between_probes)
-//         opts->wait_between_probes_value = atoi(opts->wait_between_probes);
-//     !opts->timeout ? (opts->timeout_value = TIMEOUT) : (opts->timeout_value = atoi(opts->timeout));
-//     !opts->max_hops ? (opts->max_hops_value = MAX_HOPS) : (opts->max_hops_value = atoi(opts->max_hops));
-//     !opts->first_ttl ? (opts->first_ttl_value = 1) : (opts->first_ttl_value = atoi(opts->first_ttl));
+//         opts->wait_between_probes_value = ft_atoi(opts->wait_between_probes);
+//     !opts->timeout ? (opts->timeout_value = TIMEOUT) : (opts->timeout_value = ft_atoi(opts->timeout));
+//     !opts->max_hops ? (opts->max_hops_value = MAX_HOPS) : (opts->max_hops_value = ft_atoi(opts->max_hops));
+//     !opts->first_ttl ? (opts->first_ttl_value = 1) : (opts->first_ttl_value = ft_atoi(opts->first_ttl));
 //     if(!opts->starting_port){
 //         opts->starting_port_value = STARTING_PORT;
 //         opts->starting_port_set = 1;
 //     }
 //     else{
-//         opts->starting_port_value = atoi(opts->starting_port);
+//         opts->starting_port_value = ft_atoi(opts->starting_port);
 //         if(opts->starting_port_value == 0)
 //         {
 //             fprintf(stderr, "ft_traceroute: invalid starting port '%s'\n", opts->starting_port);

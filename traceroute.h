@@ -78,6 +78,11 @@ int value_check(traceroute_options *opts);
 int isnumeric(const char *str);
 void print_invalid_option(const char *opt);
 void print_help(void);
+char* name_resolve(struct sockaddr_in recv_addr);
+void print_invalid_option(const char *opt);
+void print_help(void);
+int ft_strcmp(const char *s1, const char *s2);
+int resolve_ip(const char *name_or_ip, struct sockaddr_in *dest_addr);
 
 #endif
 
