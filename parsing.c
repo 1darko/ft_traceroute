@@ -130,6 +130,11 @@ int parser(int ac, char **av, traceroute_options *opts, char **dst_ip)
     opts->timeout_value               = opts->timeout             ? ft_atoi(opts->timeout)            : TIMEOUT;
     opts->max_hops_value              = opts->max_hops            ? ft_atoi(opts->max_hops)           : MAX_HOPS;
     opts->first_ttl_value             = opts->first_ttl           ? ft_atoi(opts->first_ttl)          : 1;
+    if(opts->max_hops_value > 255)
+    {
+        fprintf(stderr, "max hops cannot be more than 255\n");
+        return 1;
+    }
     if (opts->wait_between_probes)
         opts->wait_between_probes_value = ft_atoi(opts->wait_between_probes);
     if (!opts->starting_port) {
