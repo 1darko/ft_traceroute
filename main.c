@@ -115,7 +115,10 @@ void print_probe_result(int probe, ssize_t n, int ttl,
         printf("%2d  %s (%s)  ", ttl,
                resolved_name ? resolved_name : inet_ntoa(recv_addr.sin_addr),
                inet_ntoa(recv_addr.sin_addr));
-        free(resolved_name);
+        if(resolved_name){
+            free(resolved_name);
+            resolved_name = NULL;
+        }               
     }
     else if (probe == 0 && n < 0)
         printf("%2d  ", ttl);

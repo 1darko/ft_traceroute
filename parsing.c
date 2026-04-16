@@ -135,6 +135,11 @@ int parser(int ac, char **av, traceroute_options *opts, char **dst_ip)
         fprintf(stderr, "max hops cannot be more than 255\n");
         return 1;
     }
+    if(opts->max_hops_value < opts->first_ttl_value)
+    {
+        fprintf(stderr, "first hop out of range\n");
+        return 1;
+    }
     if (opts->wait_between_probes)
         opts->wait_between_probes_value = ft_atoi(opts->wait_between_probes);
     if (!opts->starting_port) {
